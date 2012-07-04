@@ -84,7 +84,7 @@ class Controller extends \Controller
 	}
 
 	/*
-	 * Should be
+	 * need to think
 	 * */
 	private function _sitemap()
 	{
@@ -93,7 +93,7 @@ class Controller extends \Controller
 
 	private function _robots()
 	{
-
+		echo 'robots package';
 	}
 
 
