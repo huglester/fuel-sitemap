@@ -13,7 +13,7 @@ namespace Sitemap;
  * @license    http://webas.lt
  */
 
-class Controller extends \Controller
+abstract class Controller extends \Controller
 {
 	public function before()
 	{
@@ -25,6 +25,9 @@ class Controller extends \Controller
 
 	public function router()
 	{
+		/*
+		 * robots.txt or sitemap.xml(.gz)
+		 * */
 		$filename = null;
 
 		foreach (\Config::get('sitemap.detect_order') as $key)
@@ -38,38 +41,40 @@ class Controller extends \Controller
 
 		if ( ! $filename)
 		{
-			exit('sitemap not exits. probably introduce empty sitemap too ;)');
+			exit('sitemap.xml(.gz)/robots.txt not set. Maybe allow some dummy sitemap to return?');
 		}
 
 
 		switch ($filename)
 		{
 			case 'robots.txt':
+
 				$headers = array('Content-Type' => 'text/plain');
+				$robots = ($robots = $this->_robots()) ? $robots : \Config::get('sitemap.robots', array('User-agent: *', 'Allow: /' ));
 
-				$robots = \Config::get('sitemap.robots');
-				$robots = implode("\n", $robots);
-				
+				// implode the robot.txt array
+				is_array($robots) and $robots = implode("\n", $robots);
+
 				return \Response::forge($robots, 200, $headers);
-
 				break;
 
 			case 'sitemap.xml':
-				$this->_sitemap();
+
 				$headers = array('Content-Type' => 'text/xml');
-				$sitemap = 'generate body here';
+				$sitemap = $this->_sitemap();
 
 				return \Response::forge($sitemap, 200, $headers);
 
 				break;
 
 			case 'sitemap.xml.gz':
+
 				$headers = array(
 					'Content-Disposition' => 'attachment; filename=sitemap.xml.gz',
 					'Content-Type' => 'application/x-gzip',
 				);
 
-				$sitemap = 'generate GZ body here';
+				$sitemap = $this->_sitemap();
 
 				if (function_exists('gzencode'))
 				{
@@ -86,15 +91,8 @@ class Controller extends \Controller
 	/*
 	 * need to think
 	 * */
-	private function _sitemap()
-	{
-		echo 'sitemap package';
-	}
+	abstract protected function _sitemap();
 
-	private function _robots()
-	{
-		echo 'robots package';
-	}
-
+	abstract protected function _robots();
 
 }
