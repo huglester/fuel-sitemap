@@ -14,15 +14,27 @@ Controller:
 
     class Controller_Sitemap extends \Sitemap\Controller {
 
-    	private function _sitemap()
-    	{
-    		// Maybe do an HMVC request from here...?
-    		return 'controller _sitemap.xml(.gz)';
-    	}
+        protected function _sitemap()
+        {
+            $result = \DB::select('url', 'updated_at')
+                ->from('profiles')
+                ->where('completed_step', 3)
+                ->where('status', '<', 2)
+                ->where('active', '<', 2)
+                ->order_by('id', 'desc')
+                ->execute()->as_array();
 
-    	private function _robots()
-    	{
-    		return 'controller robots.txt';
-    	}
+            foreach ($result as $k => $r)
+            {
+                $result[$k]['url'] = \Uri::base().$r['url'];
+            }
+
+            return $result;
+        }
+
+        protected function _robots()
+        {
+            return 'controller robots.txt';
+        }
 
     }

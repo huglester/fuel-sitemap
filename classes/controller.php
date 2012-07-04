@@ -44,48 +44,68 @@ abstract class Controller extends \Controller
 			exit('sitemap.xml(.gz)/robots.txt not set. Maybe allow some dummy sitemap to return?');
 		}
 
+		$cache_filename = 'sitemap_'.md5($filename);
+		$output = null;
 
-		switch ($filename)
+		if (\Config::get('sitemap.cache', 3600) !== false)
 		{
-			case 'robots.txt':
+			try
+			{
+				$output = \Cache::get($cache_filename);
 
-				$headers = array('Content-Type' => 'text/plain');
-				$robots = ($robots = $this->_robots()) ? $robots : \Config::get('sitemap.robots', array('User-agent: *', 'Allow: /' ));
-
-				// implode the robot.txt array
-				is_array($robots) and $robots = implode("\n", $robots);
-
-				return \Response::forge($robots, 200, $headers);
-				break;
-
-			case 'sitemap.xml':
-
-				$headers = array('Content-Type' => 'text/xml');
-				$sitemap = $this->_sitemap();
-
-				return \Response::forge($sitemap, 200, $headers);
-
-				break;
-
-			case 'sitemap.xml.gz':
-
-				$headers = array(
-					'Content-Disposition' => 'attachment; filename=sitemap.xml.gz',
-					'Content-Type' => 'application/x-gzip',
-				);
-
-				$sitemap = $this->_sitemap();
-
-				if (function_exists('gzencode'))
-				{
-					$sitemap = gzencode($sitemap, 9);
-				}
-
-				return \Response::forge($sitemap, 200, $headers);
-
-				break;
+			}
+			catch (\Exception $e)
+			{
+				// cache not found
+			}
 		}
 
+		if ($output === null)
+		{
+			switch ($filename)
+			{
+				case 'robots.txt':
+					$output = ($output = $this->_robots()) ? $output : \Config::get('sitemap.robots', array('User-agent: *', 'Allow: /' ));
+
+					// implode the robot.txt array
+					is_array($output) and $output = implode("\n", $output);
+					break;
+
+				case 'sitemap.xml':
+					$sitemap = $this->_sitemap();
+
+					$data = array(
+						'sitemap' => $sitemap,
+					);
+
+					$fields = array('loc', 'lastmod', 'changefreq', 'priority');
+
+					foreach ($fields as $f)
+					{
+						$data[$f] = \Config::get('sitemap.aliases.'.$f, $f);
+					}
+
+					$output = \View::forge('sitemap', $data);
+					break;
+
+				case 'sitemap.xml.gz':
+					$output = $this->_sitemap();
+
+					if (function_exists('gzencode'))
+					{
+						$output = gzencode($output, 9);
+					}
+
+					//return \Response::forge($sitemap, 200, $headers);
+
+					break;
+			}
+
+			\Cache::set($cache_filename, $output, \Config::get('sitemap.cache', 3600));
+		}
+
+		$headers = \Config::get('sitemap.headers', array());
+		return \Response::forge($output, 200, $headers[$filename]);
 	}
 
 	/*
