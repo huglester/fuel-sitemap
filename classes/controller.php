@@ -72,6 +72,7 @@ abstract class Controller extends \Controller
 					break;
 
 				case 'sitemap.xml':
+				case 'sitemap.xml.gz':
 					$sitemap = $this->_sitemap();
 
 					$data = array(
@@ -87,21 +88,14 @@ abstract class Controller extends \Controller
 
 					$output = \View::forge('sitemap', $data);
 					break;
-
-				case 'sitemap.xml.gz':
-					$output = $this->_sitemap();
-
-					if (function_exists('gzencode'))
-					{
-						$output = gzencode($output, 9);
-					}
-
-					//return \Response::forge($sitemap, 200, $headers);
-
-					break;
 			}
 
 			\Cache::set($cache_filename, $output, \Config::get('sitemap.cache', 3600));
+		}
+
+		if ($filename == 'sitemap.xml.gz' and function_exists('gzencode'))
+		{
+			$output = gzencode($output, 9);
 		}
 
 		$headers = \Config::get('sitemap.headers', array());
